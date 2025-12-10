@@ -9,6 +9,9 @@ import lombok.Singular;
 
 import java.util.List;
 
+/**
+ * Immutable description of the loaded map grid, checkpoints, and start/end points.
+ */
 @Data
 @Builder
 public class GameMap {
@@ -22,6 +25,7 @@ public class GameMap {
         return checkPoints.get(i);
     }
 
+    /** Ordered path node for enemy navigation. */
     public record CheckPoint(int id, Point2D point) {}
     @NonNull private final Integer gridX;
     @NonNull private final Integer gridY;
