@@ -13,10 +13,6 @@ open module com.github.griffty.finalproject {
     requires static lombok;
     requires java.desktop;
     requires com.almasb.fxgl.core;
-//    requires com.github.griffty.finalproject;
-//    requires com.github.griffty.finalproject;
-//    requires com.github.griffty.finalproject;
-//    requires com.github.griffty.finalproject;
 
 
     exports com.github.griffty.finalproject;

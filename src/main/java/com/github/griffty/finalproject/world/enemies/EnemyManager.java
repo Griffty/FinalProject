@@ -13,20 +13,41 @@ import lombok.Getter;
 import static com.almasb.fxgl.dsl.FXGLForKtKt.entityBuilder;
 import static com.almasb.fxgl.dsl.FXGLForKtKt.runOnce;
 
+/**
+ * Controls wave progression and enemy spawning logic.
+ *
+ * <p>The manager tracks the current wave number, expands difficulty by adjusting counts,
+ * health, and air ratios, and relies on FXGL's {@code runOnce} utility to schedule both
+ * individual spawns and subsequent waves.</p>
+ */
 public class EnemyManager {
 
     @Getter private int wave = 0;
     private boolean running = false;
 
-    // To tweak difficulty curve
-    private static final double WAVE_DURATION = 12.0; // seconds per wave, roughly
+    /**
+     * Duration in seconds between waves.
+     */
+    private static final double WAVE_DURATION = 12.0;
 
+    /**
+     * Begins spawning waves if not already running.
+     *
+     * <p>Subsequent waves are chained via {@link #scheduleNextWave()} so callers only need
+     * to trigger this once when the match starts.</p>
+     */
     public void start() {
         if (running) return;
         running = true;
         scheduleNextWave();
     }
 
+    /**
+     * Calculates wave parameters and schedules the next cycle.
+     *
+     * <p>Returns {@code null} to satisfy Kotlin interop signatures used by FXGL's helper
+     * callbacks.</p>
+     */
     private Unit scheduleNextWave() {
         wave++;
 
@@ -43,36 +64,58 @@ public class EnemyManager {
 
         spawnWave(enemyCount, airRatio, hpMul, interval);
 
-        // Schedule next wave after WAVE_DURATION seconds
         runOnce(this::scheduleNextWave, Duration.seconds(WAVE_DURATION));
         return null;
     }
 
+    /**
+     * Calculates the number of enemies for the wave.
+     *
+     * @param wave current wave index
+     * @return enemy count
+     */
     private int computeEnemyCount(int wave) {
-        // Grows linearly, gets pretty intense by wave ~8–10
         return 4 + wave * 2;
     }
 
+    /**
+     * Determines the proportion of air enemies in the wave.
+     *
+     * @param wave current wave index
+     * @return ratio between 0.1 and 0.6
+     */
     private double computeAirRatio(int wave) {
-        // Start at 10%, ramp to 60% and cap
         double r = 0.1 * wave;
         if (r < 0.1) r = 0.1;
         if (r > 0.6) r = 0.6;
         return r;
     }
 
+    /**
+     * Computes the health multiplier for enemies in the wave.
+     *
+     * @param wave current wave index
+     * @return multiplier applied to base health
+     */
     private double computeHpMultiplier(int wave) {
-        // Enemies get ~12% tankier each wave
         return 1.0 + 0.12 * wave;
     }
 
+    /**
+     * Computes the interval between enemy spawns.
+     *
+     * @param wave current wave index
+     * @return seconds between spawns
+     */
     private double computeSpawnInterval(int wave) {
-        // Start at ~1.8s between spawns, ramp down to 0.3s
         double interval = 1.8 - 0.12 * wave;
         if (interval < 0.3) interval = 0.3;
         return interval;
     }
 
+    /**
+     * Enqueues timed spawns for a single wave using fixed intervals.
+     */
     private void spawnWave(int enemyCount, double airRatio, double hpMul, double interval) {
         for (int i = 0; i < enemyCount; i++) {
             int index = i;
@@ -81,8 +124,10 @@ public class EnemyManager {
         }
     }
 
+    /**
+     * Spawns one enemy according to its index and configured air ratio.
+     */
     private Unit spawnSingleEnemyInWave(int index, int total, double airRatio, double hpMul) {
-        // Decide if this one is air or ground
         boolean isAir = (index < (int)(total * airRatio));
 
         if (isAir) {
@@ -92,8 +137,6 @@ public class EnemyManager {
         }
         return null;
     }
-
-    // ----- Hook these into your actual enemy creation code -----
 
     private void spawnGroundEnemy(double hpMul) {
         getBaseBuilder(new GroundEnemyComponent((int)(25 * hpMul), 1, (int)(4 * ((hpMul-1)/4+1)), 50 * ((hpMul-1)/2+1)))

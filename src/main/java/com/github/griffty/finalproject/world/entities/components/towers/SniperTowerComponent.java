@@ -13,6 +13,9 @@ import javafx.scene.shape.Shape;
 import static com.almasb.fxgl.dsl.FXGLForKtKt.entityBuilder;
 import static com.almasb.fxgl.dsl.FXGLForKtKt.texture;
 
+/**
+ * Slow but powerful tower that fires homing projectiles over very long distances.
+ */
 public class SniperTowerComponent extends AbstractTowerComponent {
     public SniperTowerComponent() {
         super(TowerType.Sniper, 1000, 1800);

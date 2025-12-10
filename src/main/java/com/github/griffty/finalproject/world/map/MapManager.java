@@ -27,6 +27,13 @@ import java.util.Optional;
 
 import static com.almasb.fxgl.dsl.FXGL.*;
 
+/**
+ * Manages map loading, rendering, and tile interaction for the game world.
+ *
+ * <p>The manager loads a text-based tile grid, converts each character into either a road
+ * or ground visual, and records checkpoints for pathfinding. It also exposes helper input
+ * wiring so ground tiles can open contextual UI when clicked once gameplay has started.</p>
+ */
 public class MapManager {
     private final int tileSize;
     @Getter private final GameMap gameMap;
@@ -40,87 +47,144 @@ public class MapManager {
     private static final Color ROAD_COLOR   = new Color(32 / 255f, 33 / 255f, 37 / 255f, 1);
     private static final Color GROUND_COLOR = Color.BLACK;
 
-    // greyish dummy on ground corners (matches road-ish tone)
     private static final Color GROUND_CORNER_DUMMY = ROAD_COLOR;
-    // black dummy on road corners (matches ground)
     private static final Color ROAD_CORNER_DUMMY   = GROUND_COLOR;
 
+    /**
+     * Lightweight representation of the parsed map definition before entities are created.
+     *
+     * @param gridX number of tiles on the X axis
+     * @param gridY number of tiles on the Y axis
+     * @param rows  raw rows of characters describing road / ground / checkpoints
+     */
+    private record MapDefinition(int gridX, int gridY, List<String> rows) { }
+
+    /**
+     * Reads the map file, constructs tile visuals, and returns the completed {@link GameMap}.
+     *
+     * <p>Because FXGL allows attaching arbitrary nodes, the method builds vector paths for
+     * smooth edges instead of relying on bitmap sprites. Checkpoints are collected during
+     * parsing so enemy movement knows where to travel.</p>
+     */
     private GameMap initWorld() {
         List<String> lines = getAssetLoader().loadText("maps/MainMap.txt");
+        MapDefinition definition = parseMapDefinition(lines);
+        char[][] grid = buildGrid(definition);
 
-        GameMap.GameMapBuilder builder = GameMap.builder();
+        return buildGameMap(definition, grid);
+    }
 
-        // First line: "gridX:gridY"
-        String[] size = lines.removeFirst().split(":");
+    /**
+     * Parses the raw text map into a definition that separates dimensions from rows.
+     *
+     * @param lines lines read from the map text file
+     * @return a {@link MapDefinition} containing grid sizes and row data
+     */
+    private MapDefinition parseMapDefinition(List<String> lines) {
+        List<String> mutableLines = new ArrayList<>(lines);
+
+        /* First line: "gridX:gridY". This establishes the grid dimensions for all parsing. */
+        String[] size = mutableLines.removeFirst().split(":");
         int gridX = Integer.parseInt(size[0]);
         int gridY = Integer.parseInt(size[1]);
 
-        builder.gridX(gridX);
-        builder.gridY(gridY);
+        return new MapDefinition(gridX, gridY, mutableLines);
+    }
 
-        // Build a grid for easy neighbor lookup
-        char[][] grid = new char[gridY][gridX];
-        for (int y = 0; y < gridY; y++) {
-            String row = lines.get(y);
-            for (int x = 0; x < gridX; x++) {
+    /**
+     * Builds a 2D grid to make neighbor lookup easy for rendering rounded corners.
+     *
+     * @param definition parsed map definition containing size and row data
+     * @return 2D character grid matching {@link MapDefinition#gridX()} and {@link MapDefinition#gridY()}
+     */
+    private char[][] buildGrid(MapDefinition definition) {
+        char[][] grid = new char[definition.gridY()][definition.gridX()];
+        for (int y = 0; y < definition.gridY(); y++) {
+            String row = definition.rows().get(y);
+            for (int x = 0; x < definition.gridX(); x++) {
                 grid[y][x] = row.charAt(x);
             }
         }
+        return grid;
+    }
+
+    /**
+     * Converts the parsed grid into rendered tiles, in-world entities, and checkpoint metadata.
+     *
+     * @param definition parsed map definition containing sizes and row data
+     * @param grid       normalized character grid for neighbor checks
+     * @return fully constructed {@link GameMap}
+     */
+    private GameMap buildGameMap(MapDefinition definition, char[][] grid) {
+        GameMap.GameMapBuilder builder = GameMap.builder();
+        builder.gridX(definition.gridX());
+        builder.gridY(definition.gridY());
 
         List<GameMap.CheckPoint> checkPoints = new ArrayList<>();
 
-        for (int y = 0; y < gridY; y++) {
-            String row = lines.get(y);
+        for (int y = 0; y < definition.gridY(); y++) {
+            String row = definition.rows().get(y);
 
-            for (int x = 0; x < gridX; x++) {
+            for (int x = 0; x < definition.gridX(); x++) {
                 char c = row.charAt(x);
 
-                // ----- GROUND TILES ('#') -----
                 if (c == '#') {
-                    Node node = createGroundTileShape(x, y, tileSize, grid);
-
-                    EntityBuilder tileEntityBuilder = entityBuilder()
-                            .at(x * tileSize + tileSize / 2.0, y * tileSize + tileSize / 2.0)
-                            .view(node);
-
-                    // center the local [0..tileSize] shape on entity
-                    node.setTranslateX(-tileSize / 2.0);
-                    node.setTranslateY(-tileSize / 2.0);
-
-                    tileEntityBuilder.type(EntityType.GROUND);
-                    tileEntityBuilder.with(new GroundComponent());
-                    tileEntityBuilder.buildAndAttach();
+                    buildGroundTile(grid, y, x);
                 }
 
-                // ----- ROAD TILES ('$' or digits) -----
                 if (c == '$' || (c >= '0' && c <= '9')) {
-
-                    if (c != '$') {
-                        int id = c - '0';
-                        checkPoints.add(new GameMap.CheckPoint(
-                                id,
-                                new Point2D(x * tileSize + tileSize / 2.0,
-                                        y * tileSize + tileSize / 2.0)
-                        ));
-                    }
-
-                    Node roadNode = createRoadTileShape(x, y, tileSize, grid);
-
-                    roadNode.setTranslateX(x * tileSize);
-                    roadNode.setTranslateY(y * tileSize);
-
-                    getGameScene().addGameView(new GameView(roadNode, 0));
+                    addRoadTile(checkPoints, y, x, c, grid);
                 }
             }
         }
 
-        // Sort checkpoints and set start / end
+        /* Sort checkpoints and set start / end to guarantee path order for all waves. */
         checkPoints.sort(Comparator.comparing(GameMap.CheckPoint::id));
         builder.startPoint(checkPoints.removeFirst());
         builder.endPoint(checkPoints.removeLast());
         builder.checkPoints(checkPoints);
 
         return builder.build();
+    }
+
+    /**
+     * Creates the entity and visuals for a single ground tile.
+     */
+    private void buildGroundTile(char[][] grid, int y, int x) {
+        Node node = createGroundTileShape(x, y, tileSize, grid);
+
+        EntityBuilder tileEntityBuilder = entityBuilder()
+                .at(x * tileSize + tileSize / 2.0, y * tileSize + tileSize / 2.0)
+                .view(node);
+
+        /* Center the local [0..tileSize] shape on entity. */
+        node.setTranslateX(-tileSize / 2.0);
+        node.setTranslateY(-tileSize / 2.0);
+
+        tileEntityBuilder.type(EntityType.GROUND);
+        tileEntityBuilder.with(new GroundComponent());
+        tileEntityBuilder.buildAndAttach();
+    }
+
+    /**
+     * Adds a road tile to the scene graph and records checkpoints when present.
+     */
+    private void addRoadTile(List<GameMap.CheckPoint> checkPoints, int y, int x, char c, char[][] grid) {
+        if (c != '$') {
+            int id = c - '0';
+            checkPoints.add(new GameMap.CheckPoint(
+                    id,
+                    new Point2D(x * tileSize + tileSize / 2.0,
+                            y * tileSize + tileSize / 2.0)
+            ));
+        }
+
+        Node roadNode = createRoadTileShape(x, y, tileSize, grid);
+
+        roadNode.setTranslateX(x * tileSize);
+        roadNode.setTranslateY(y * tileSize);
+
+        getGameScene().addGameView(new GameView(roadNode, 0));
     }
 
     /**
@@ -138,22 +202,27 @@ public class MapManager {
     /**
      * Ground tile with rounded cut-out corners near roads,
      * plus wedge-shaped dummy markers at those corners (greyish).
+     *
+     * <p>The rounded-corner logic helps visually communicate where roads carve into the
+     * ground. Dummy wedges fill the opposite color to avoid tiny gaps or aliasing artifacts
+     * at the joints between adjacent tiles.</p>
      */
     private Node createGroundTileShape(int x, int y, double tileSize, char[][] grid) {
         int gridY = grid.length;
         int gridX = grid[0].length;
 
         double s = tileSize;
-        double r = 30;          // radius of rounded corner
-        double dummyR = r;  // size of dummy wedge
+        /* Radius of rounded corner. */
+        double r = 30;
+        double dummyR = r;
 
-        // Look at neighbors (roads)
+        /* Look at neighboring road tiles. */
         boolean roadUp    = isRoad(x,     y - 1, gridX, gridY, grid);
         boolean roadDown  = isRoad(x,     y + 1, gridX, gridY, grid);
         boolean roadLeft  = isRoad(x - 1, y,     gridX, gridY, grid);
         boolean roadRight = isRoad(x + 1, y,     gridX, gridY, grid);
 
-        // Simple rule: only round "outer" corners (adjacent to roads in both directions)
+        /* Only round "outer" corners adjacent to roads in both directions. */
         boolean roundTL = roadUp && roadLeft;
         boolean roundTR = roadUp && roadRight;
         boolean roundBR = roadDown && roadRight;
@@ -161,13 +230,13 @@ public class MapManager {
 
         Path p = new Path();
 
-        // Start near top-left
+        /* Start near top-left. */
         p.getElements().add(new MoveTo(roundTL ? r : 0, 0));
 
-        // Top edge to near TR
+        /* Top edge to near TR. */
         p.getElements().add(new LineTo(s - (roundTR ? r : 0), 0));
 
-        // Top-right corner
+        /* Top-right corner. */
         if (roundTR) {
             p.getElements().add(new QuadCurveTo(
                     s, 0,
@@ -178,10 +247,10 @@ public class MapManager {
             p.getElements().add(new LineTo(s, r));
         }
 
-        // Right edge down to near BR
+        /* Right edge down to near BR. */
         p.getElements().add(new LineTo(s, s - (roundBR ? r : 0)));
 
-        // Bottom-right corner
+        /* Bottom-right corner. */
         if (roundBR) {
             p.getElements().add(new QuadCurveTo(
                     s, s,
@@ -192,10 +261,10 @@ public class MapManager {
             p.getElements().add(new LineTo(s - r, s));
         }
 
-        // Bottom edge to near BL
+        /* Bottom edge to near BL. */
         p.getElements().add(new LineTo(roundBL ? r : 0, s));
 
-        // Bottom-left corner
+        /* Bottom-left corner. */
         if (roundBL) {
             p.getElements().add(new QuadCurveTo(
                     0, s,
@@ -206,10 +275,10 @@ public class MapManager {
             p.getElements().add(new LineTo(0, s - r));
         }
 
-        // Left edge up to near TL
+        /* Left edge up to near TL. */
         p.getElements().add(new LineTo(0, (roundTL ? r : 0)));
 
-        // Top-left corner
+        /* Top-left corner. */
         if (roundTL) {
             p.getElements().add(new QuadCurveTo(
                     0, 0,
@@ -227,7 +296,7 @@ public class MapManager {
 
         Group root = new Group(p);
 
-        // ---- dummy wedge markers on rounded corners (greyish) ----
+        /* Dummy wedge markers on rounded corners (greyish) to smooth the seam to roads. */
         if (roundTL) {
             root.getChildren().add(createCornerDummyTL(dummyR, GROUND_CORNER_DUMMY));
         }
@@ -247,22 +316,27 @@ public class MapManager {
     /**
      * Road tile with rounded corners where it meets ground,
      * plus wedge-shaped dummy markers at those corners (black).
+     *
+     * <p>This mirrors the ground rendering logic but flips the colors, so junctions between
+     * ground and road remain flush. Stroke is disabled to prevent thin outlines that could
+     * appear when the camera is zoomed.</p>
      */
     private Node createRoadTileShape(int x, int y, double tileSize, char[][] grid) {
         int gridY = grid.length;
         int gridX = grid[0].length;
 
         double s = tileSize;
-        double r = 30;          // same radius as ground
-        double dummyR = r;  // size of dummy wedge
+        /* Same radius as ground corners. */
+        double r = 30;
+        double dummyR = r;
 
-        // Where there is ground (not road)
+        /* Neighboring ground tiles. */
         boolean groundUp    = !isRoad(x,     y - 1, gridX, gridY, grid);
         boolean groundDown  = !isRoad(x,     y + 1, gridX, gridY, grid);
         boolean groundLeft  = !isRoad(x - 1, y,     gridX, gridY, grid);
         boolean groundRight = !isRoad(x + 1, y,     gridX, gridY, grid);
 
-        // Round corners on the road where it meets ground in both directions
+        /* Round corners on the road where it meets ground in both directions. */
         boolean roundTL = groundUp && groundLeft;
         boolean roundTR = groundUp && groundRight;
         boolean roundBR = groundDown && groundRight;
@@ -270,13 +344,13 @@ public class MapManager {
 
         Path p = new Path();
 
-        // Start near top-left
+        /* Start near top-left. */
         p.getElements().add(new MoveTo(roundTL ? r : 0, 0));
 
-        // Top edge to near TR
+        /* Top edge to near TR. */
         p.getElements().add(new LineTo(s - (roundTR ? r : 0), 0));
 
-        // Top-right corner
+        /* Top-right corner. */
         if (roundTR) {
             p.getElements().add(new QuadCurveTo(
                     s, 0,
@@ -287,10 +361,10 @@ public class MapManager {
             p.getElements().add(new LineTo(s, r));
         }
 
-        // Right edge down to near BR
+        /* Right edge down to near BR. */
         p.getElements().add(new LineTo(s, s - (roundBR ? r : 0)));
 
-        // Bottom-right corner
+        /* Bottom-right corner. */
         if (roundBR) {
             p.getElements().add(new QuadCurveTo(
                     s, s,
@@ -301,10 +375,10 @@ public class MapManager {
             p.getElements().add(new LineTo(s - r, s));
         }
 
-        // Bottom edge to near BL
+        /* Bottom edge to near BL. */
         p.getElements().add(new LineTo(roundBL ? r : 0, s));
 
-        // Bottom-left corner
+        /* Bottom-left corner. */
         if (roundBL) {
             p.getElements().add(new QuadCurveTo(
                     0, s,
@@ -315,10 +389,10 @@ public class MapManager {
             p.getElements().add(new LineTo(0, s - r));
         }
 
-        // Left edge up to near TL
+        /* Left edge up to near TL. */
         p.getElements().add(new LineTo(0, (roundTL ? r : 0)));
 
-        // Top-left corner
+        /* Top-left corner. */
         if (roundTL) {
             p.getElements().add(new QuadCurveTo(
                     0, 0,
@@ -331,12 +405,13 @@ public class MapManager {
 
         p.setFill(ROAD_COLOR);
         p.setStrokeType(StrokeType.INSIDE);
-        p.setStroke(ROAD_COLOR);   // no visible outline gap
+        /* No visible outline gap. */
+        p.setStroke(ROAD_COLOR);
         p.setStrokeWidth(0.0);
 
         Group root = new Group(p);
 
-        // ---- dummy wedge markers on rounded corners (black) ----
+        /* Dummy wedge markers on rounded corners (black) matching the road surface. */
         if (roundTL) {
             root.getChildren().add(createCornerDummyTL(dummyR, ROAD_CORNER_DUMMY));
         }
@@ -358,6 +433,9 @@ public class MapManager {
     /**
      * Top-left dummy: 2 straight edges along top & left, curved hypotenuse.
      * Local coordinates; corner at (0,0).
+     *
+     * <p>All dummy helpers use local coordinates so callers can translate them into place
+     * relative to the tile size without rewriting the geometry math.</p>
      */
     private Path createCornerDummyTL(double r, Color color) {
         Path path = new Path();
@@ -371,6 +449,9 @@ public class MapManager {
 
     /**
      * Top-right dummy: corner at (s,0).
+     *
+     * <p>The slight 0.5 pixel offsets counter sub-pixel rendering artifacts that appear at
+     * certain scale factors when FXGL hands geometry to JavaFX.</p>
      */
     private Path createCornerDummyTR(double s, double r, Color color) {
         Path path = new Path();
@@ -408,6 +489,11 @@ public class MapManager {
         return path;
     }
 
+    /**
+     * Registers click input so ground tiles reveal their configuration panel once the game
+     * has started. The lookup uses proximity to the mouse to avoid precision issues with
+     * complex vector shapes.
+     */
     private void initTileInput() {
         PublicUserAction clickTile = new PublicUserAction() {
             @Override

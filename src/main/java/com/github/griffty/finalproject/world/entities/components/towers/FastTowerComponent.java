@@ -14,6 +14,9 @@ import javafx.scene.shape.Shape;
 import static com.almasb.fxgl.dsl.FXGLForKtKt.entityBuilder;
 import static com.almasb.fxgl.dsl.FXGLForKtKt.texture;
 
+/**
+ * Rapid-fire tower with moderate range that shoots straight-moving projectiles.
+ */
 public class FastTowerComponent extends AbstractTowerComponent {
     public FastTowerComponent() {
         super(TowerType.Fast, 200, 400);
