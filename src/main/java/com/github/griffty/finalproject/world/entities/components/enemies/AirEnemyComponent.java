@@ -9,6 +9,9 @@ import javafx.scene.Node;
 
 import static com.almasb.fxgl.dsl.FXGLForKtKt.texture;
 
+/**
+ * Flying enemy that travels straight to the final checkpoint, bypassing intermediate waypoints.
+ */
 public class AirEnemyComponent extends AbstractEnemyComponent{
     private int size = 20;
     public AirEnemyComponent(int health, int damage, int reward, double speed) {

@@ -5,6 +5,9 @@ import com.github.griffty.finalproject.world.entities.components.towers.Abstract
 import javafx.scene.control.Label;
 import javafx.scene.text.TextAlignment;
 
+/**
+ * UI panel for the basic fast-firing tower, highlighting its name and providing sell support.
+ */
 public class FastTowerPanel extends AbstractTowerPanel {
     public FastTowerPanel(FastTowerComponent tower) {
         Label towerName = new Label("Tower Name: " + "Simple Tower");

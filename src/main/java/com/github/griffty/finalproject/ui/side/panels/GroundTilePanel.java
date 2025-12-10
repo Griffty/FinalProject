@@ -16,6 +16,10 @@ import javafx.scene.text.TextAlignment;
 
 import java.util.Optional;
 
+/**
+ * Panel shown when selecting a ground tile. Presents build options or forwards to tower panels
+ * if a tower is already present.
+ */
 public class GroundTilePanel extends AbstractInfoPanel {
     protected GroundTilePanel(GroundComponent component) {
         VBox vBox = new VBox();

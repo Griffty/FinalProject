@@ -2,8 +2,9 @@ package com.github.griffty.finalproject.ui;
 
 import com.almasb.fxgl.app.scene.Viewport;
 import com.github.griffty.finalproject.Constants;
-import com.github.griffty.finalproject.util.input.InputManager;
-import com.github.griffty.finalproject.util.input.PublicUserAction;
+import com.github.griffty.finalproject.input.InputManager;
+import com.github.griffty.finalproject.input.PublicUserAction;
+import com.github.griffty.finalproject.world.WorldManager;
 import javafx.scene.input.MouseButton;
 import javafx.geometry.Point2D;
 

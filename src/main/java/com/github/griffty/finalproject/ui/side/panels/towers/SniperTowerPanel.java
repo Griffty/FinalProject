@@ -6,6 +6,9 @@ import com.github.griffty.finalproject.world.entities.components.towers.SniperTo
 import javafx.scene.control.Label;
 import javafx.scene.text.TextAlignment;
 
+/**
+ * UI panel for the long-range sniper tower, including quick sell access.
+ */
 public class SniperTowerPanel extends AbstractTowerPanel {
     public SniperTowerPanel(SniperTowerComponent tower) {
         Label towerName = new Label("Tower Name: " + "Sniper Tower");

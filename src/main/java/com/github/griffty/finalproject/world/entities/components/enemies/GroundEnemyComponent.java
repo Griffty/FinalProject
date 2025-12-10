@@ -9,6 +9,9 @@ import javafx.scene.Node;
 
 import static com.almasb.fxgl.dsl.FXGLForKtKt.texture;
 
+/**
+ * Standard ground unit that follows map checkpoints across the road path.
+ */
 public class GroundEnemyComponent extends AbstractEnemyComponent{
     private int size = 20;
     public GroundEnemyComponent(int health, int damage, int reward, double speed) {

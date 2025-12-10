@@ -12,6 +12,9 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
+/**
+ * Shared UI scaffolding for tower-specific panels (name, sell action, custom stats).
+ */
 public abstract class AbstractTowerPanel extends AbstractInfoPanel {
     private final VBox towerInfoBox;
 
@@ -27,7 +30,7 @@ public abstract class AbstractTowerPanel extends AbstractInfoPanel {
         sellButton.setStyle("-fx-background-color: #5e5e5e; -fx-text-fill: white; -fx-font-weight: bold;");
         sellButton.setOnAction(_ -> {
             Entity towerEntity = tower.getEntity();
-            if (TowerHelper.RemoveTower(towerEntity)) {
+            if (TowerHelper.removeTower(towerEntity)) {
                 UIManager.get().getSideBar().show(GroundTilePanel.create(towerEntity.getComponent(GroundComponent.class)));
             }
         });
