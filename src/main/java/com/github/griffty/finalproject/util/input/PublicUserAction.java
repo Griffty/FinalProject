@@ -1,4 +1,4 @@
-package com.github.griffty.finalproject.input;
+package com.github.griffty.finalproject.util.input;
 
 public abstract class PublicUserAction {
     public void onActionBegin(){};

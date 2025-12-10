@@ -21,5 +21,5 @@ open module com.github.griffty.finalproject {
 
     exports com.github.griffty.finalproject;
     exports com.github.griffty.finalproject.util;
-    exports com.github.griffty.finalproject.input;
+    exports com.github.griffty.finalproject.util.input;
 }

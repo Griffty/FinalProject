@@ -4,7 +4,7 @@ import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.physics.CollisionHandler;
-import com.github.griffty.finalproject.input.InputManager;
+import com.github.griffty.finalproject.util.input.InputManager;
 import com.github.griffty.finalproject.ui.UIManager;
 import com.github.griffty.finalproject.util.EntityUtil;
 import com.github.griffty.finalproject.world.WorldManager;

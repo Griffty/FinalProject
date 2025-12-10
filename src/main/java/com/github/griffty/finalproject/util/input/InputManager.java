@@ -1,4 +1,4 @@
-package com.github.griffty.finalproject.input;
+package com.github.griffty.finalproject.util.input;
 
 import com.almasb.fxgl.input.UserAction;
 import javafx.scene.input.KeyCode;
