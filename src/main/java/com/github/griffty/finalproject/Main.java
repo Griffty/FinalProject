@@ -39,7 +39,7 @@ public class Main extends GameApplication {
         UIManager.reset();
         WorldManager.reset();
         InputManager.get().initInputs();
-        getSettings().setGlobalMusicVolume(0.3);
+        getSettings().setGlobalMusicVolume(0.1);
         loopBGM("soundTrack.mp3");
 
     }

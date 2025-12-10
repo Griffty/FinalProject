@@ -8,6 +8,6 @@ public class Constants {
         }
     }
 
-    public static final int START_MONEY = 100;
+    public static final int START_MONEY = 1000;
     public static final int START_HEALTH = 10;
 }
