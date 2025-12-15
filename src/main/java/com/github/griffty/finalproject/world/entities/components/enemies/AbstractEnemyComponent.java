@@ -31,7 +31,6 @@ public abstract class AbstractEnemyComponent extends Component implements IColli
     private GameMap.CheckPoint nextCheckPoint;
 
     private Node visuals;
-    /* Current facing angle in degrees. */
     private double currentAngle = 0.0;
 
     /**
@@ -118,23 +117,19 @@ public abstract class AbstractEnemyComponent extends Component implements IColli
      * @return updated angle after applying rotation
      */
     private double smoothRotate(double current, double target, double tpf, double speedDegPerSec) {
-        /* Normalize to [0, 360). */
         current = (current % 360 + 360) % 360;
         target  = (target  % 360 + 360) % 360;
 
-        /* Smallest signed angle difference in [-180, 180]. */
         double diff = target - current;
         if (diff > 180)  diff -= 360;
         if (diff < -180) diff += 360;
 
-        /* Maximum change allowed this frame. */
         double maxStep = speedDegPerSec * tpf;
 
         if (Math.abs(diff) <= maxStep) {
             return target;
         }
 
-        /* Move towards the target angle without overshooting. */
         return current + Math.signum(diff) * maxStep;
     }
 }

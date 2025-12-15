@@ -26,7 +26,7 @@ public class SideBar extends BorderPane {
     private final Label titleLabel;
     private final VBox content;
     @Getter
-    private final UserVariables userVariables;
+    private final UserVariablesBox userVariablesBox;
     private AbstractInfoPanel currentPanel;
     private boolean expanded = true;
 
@@ -81,11 +81,11 @@ public class SideBar extends BorderPane {
         content.setAlignment(Pos.TOP_CENTER);
 
 
-        userVariables = new UserVariables();
+        userVariablesBox = new UserVariablesBox();
 
         setTop(header);
         setCenter(content);
-        setBottom(userVariables);
+        setBottom(userVariablesBox);
 
 
         show(EmptyPanel.create());

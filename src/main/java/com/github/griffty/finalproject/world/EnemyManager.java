@@ -1,7 +1,6 @@
-package com.github.griffty.finalproject.world.enemies;
+package com.github.griffty.finalproject.world;
 
 import com.almasb.fxgl.dsl.EntityBuilder;
-import com.github.griffty.finalproject.world.WorldManager;
 import com.github.griffty.finalproject.world.entities.EntityType;
 import com.github.griffty.finalproject.world.entities.components.enemies.AbstractEnemyComponent;
 import com.github.griffty.finalproject.world.entities.components.enemies.AirEnemyComponent;
